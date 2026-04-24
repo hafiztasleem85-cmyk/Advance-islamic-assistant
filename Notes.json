@@ -86,6 +86,10 @@
       {"n": "Eid-ul-Adha", "d": "10", "m": "12"},
       {"n": "Martyrdom of Hazrat Usman Ghani (Radi Allahu Ta'ala Anhu)", "d": "18", "m": "12"}
     ]
+  },
+  "update_message": {
+    "1": "प्लगइन का नया वर्ज़न दस्तयाब है। नई सहूलियात के लिए बराए मेहरबानी अभी अपडेट करें।",
+    "2": "پلگ ان کا نیا ورژن دستیاب ہے۔ نئی سہولیات کے لیے برائے مہربانی ابھی اپڈیٹ کریں۔",
+    "3": "A new version of the plugin is available. Please update now to enjoy new features."
   }
 }
-
