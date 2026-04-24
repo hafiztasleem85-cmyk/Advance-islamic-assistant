@@ -385,7 +385,7 @@ reopenMainScreen = function(screenData)
   end
 end
 
-checkUpdate = function(isManual, screenData)
+checkUpdate = function(isManual, screenData, parentDialog)
   local sets = getSettings()
   local safeLang = (sets.lang == "0") and "1" or sets.lang
   if isManual then
@@ -401,7 +401,17 @@ checkUpdate = function(isManual, screenData)
         local builder = AlertDialog.Builder(service)
         builder.setTitle(langData[safeLang].updateAvailableTitle)
         builder.setMessage(updateMessage)
-        builder.setNegativeButton("Update Now", function()
+        builder.setNegativeButton("Update Now", nil)
+        builder.setPositiveButton("Maybe Later", nil)
+        local dialog = builder.create()
+        if Build.VERSION.SDK_INT >= 22 then dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) else dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) end
+        if parentDialog then pcall(function() parentDialog.dismiss() end) end
+        dialog.show()
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setAllCaps(false)
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setAllCaps(false)
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(function(v)
+          dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setEnabled(false)
+          dialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(false)
           service.speak(langData[safeLang].updateDownloading)
           Http.get(updateUrl, nil, "utf-8", nil, function(code2, res2)
             if code2 == 200 and res2 then
@@ -410,23 +420,23 @@ checkUpdate = function(isManual, screenData)
                 f:write(res2)
                 f:close()
                 service.speak(langData[safeLang].updateSuccess)
-                Handler(Looper.getMainLooper()).postDelayed(Runnable({run = function() pcall(function() dofile(currentPluginPath) end) end}), 1000)
+                Handler(Looper.getMainLooper()).postDelayed(Runnable({run = function() pcall(function() dialog.dismiss() dofile(currentPluginPath) end) end}), 1000)
               else
                 service.speak(langData[safeLang].updateSaveErr)
-                if not isManual then reopenMainScreen(screenData) end
+                dialog.dismiss()
+                reopenMainScreen(screenData)
               end
             else
               service.speak(langData[safeLang].updateDownErr)
-              if not isManual then reopenMainScreen(screenData) end
+              dialog.dismiss()
+              reopenMainScreen(screenData)
             end
           end)
         end)
-        builder.setPositiveButton("Maybe Later", function() if not isManual then reopenMainScreen(screenData) end end)
-        local dialog = builder.create()
-        if Build.VERSION.SDK_INT >= 22 then dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) else dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) end
-        dialog.show()
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setAllCaps(false)
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setAllCaps(false)
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(function(v)
+          dialog.dismiss()
+          reopenMainScreen(screenData)
+        end)
       else
         if isManual then
           local msg = string.format(langData[safeLang].noUpdateMsg, tostring(currentVersion))
@@ -437,9 +447,11 @@ checkUpdate = function(isManual, screenData)
           builder.setPositiveButton("OK", function() reopenMainScreen(screenData) end)
           local dialog = builder.create()
           if Build.VERSION.SDK_INT >= 22 then dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) else dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) end
+          if parentDialog then pcall(function() parentDialog.dismiss() end) end
           dialog.show()
           dialog.getButton(DialogInterface.BUTTON_POSITIVE).setAllCaps(false)
         else
+          if parentDialog then pcall(function() parentDialog.dismiss() end) end
           reopenMainScreen(screenData)
         end
       end
@@ -453,9 +465,11 @@ checkUpdate = function(isManual, screenData)
         builder.setPositiveButton("OK", function() reopenMainScreen(screenData) end)
         local dialog = builder.create()
         if Build.VERSION.SDK_INT >= 22 then dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) else dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) end
+        if parentDialog then pcall(function() parentDialog.dismiss() end) end
         dialog.show()
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setAllCaps(false)
       else
+        if parentDialog then pcall(function() parentDialog.dismiss() end) end
         reopenMainScreen(screenData)
       end
     end
@@ -1064,7 +1078,9 @@ showMainMenu = function(parentDialog, screenData)
     bMenu.setTitle("Menu")
     bMenu.setItems(menuOptions, DialogInterface.OnClickListener{
         onClick = function(dMenu2, which)
-            dMenu2.dismiss()
+            if which ~= 10 then
+                dMenu2.dismiss()
+            end
             if which == 0 then
                 showSmartDualCalendar(parentDialog, screenData)
             elseif which == 1 then
@@ -1135,7 +1151,7 @@ showMainMenu = function(parentDialog, screenData)
                 dAbout.show()
                 dAbout.getButton(DialogInterface.BUTTON_POSITIVE).setAllCaps(false)
             elseif which == 10 then
-                checkUpdate(true, screenData)
+                checkUpdate(true, screenData, dMenu2)
             end
         end
     })
